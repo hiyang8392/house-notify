@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import cron from 'node-cron';
 import { chromium } from 'playwright';
 import { parseHouseItems } from './parse.js';
 import { getAllIds, addIds, closeRedis } from './redis.js';
@@ -8,7 +9,7 @@ const TARGET_URL = process.env.TARGET_URL;
 const TARGET_ITEM_ELEMENT = process.env.TARGET_ITEM_ELEMENT;
 const TARGET_ITEM_INFO_ELEMENT = process.env.TARGET_ITEM_INFO_ELEMENT;
 const USER_AGENT = process.env.USER_AGENT;
-const CURRENT_TIME = new Date().toLocaleString('zh-TW', { hour12: false });
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/2 * * * *';
 const TIME_OUT = 15000;
 const BATCH_SIZE = 10;
 
@@ -36,7 +37,10 @@ const formatUpdateTime = (timeStr) => {
   }
 };
 
-(async () => {
+const searchNewHouses = async () => {
+  const currentTime = new Date().toLocaleString('zh-TW', { hour12: false });
+  console.log(`[${currentTime}] 開始搜尋新房屋..`);
+
   const browser = await chromium.launch({
     headless: true,
     args: ['--disable-blink-features=AutomationControlled'],
@@ -51,12 +55,12 @@ const formatUpdateTime = (timeStr) => {
   });
 
   const page = await context.newPage();
-  console.log('loading page...');
+  console.log('載入頁面中..');
 
   try {
     await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded' });
     await page.waitForSelector(TARGET_ITEM_INFO_ELEMENT, { timeout: TIME_OUT });
-    console.log('success, fetching data...');
+    console.log('成功，正在取得資料..');
 
     const houseData = await page.$$eval(TARGET_ITEM_ELEMENT, parseHouseItems);
     houseData.sort(
@@ -69,7 +73,7 @@ const formatUpdateTime = (timeStr) => {
     );
 
     if (newHouseData.length === 0) {
-      console.log('no new house');
+      console.log('沒有新房屋');
       return;
     }
 
@@ -98,21 +102,39 @@ const formatUpdateTime = (timeStr) => {
       });
 
       const fullMessage = `
-      🏠 新房源通知 - ${CURRENT_TIME}\n\n${messageItems.join(
+      🏠 新房屋通知 - ${currentTime}\n\n${messageItems.join(
         '\n\n━━━━━━━━━━━━━━━━\n\n'
       )}\n━━━━━━━━━━━━━━━━
     `;
-      console.log('fullMessage: ', fullMessage);
+      console.log('Message: ', fullMessage);
       await sendMessage(fullMessage);
     }
 
     const newIds = newHouseData.map((item) => item.id);
     await addIds(newIds);
   } catch (error) {
-    console.error('error: ', error);
+    console.error('Error: ', error);
   } finally {
     await browser.close();
-    await closeRedis();
-    console.log('done');
+    console.log('完成！等待下次搜尋..');
   }
-})();
+};
+
+console.log(`cron schedule: ${CRON_SCHEDULE}`);
+searchNewHouses();
+
+cron.schedule(CRON_SCHEDULE, () => {
+  searchNewHouses();
+});
+
+process.on('SIGINT', async () => {
+  console.log('Closing service');
+  await closeRedis();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('Closing service');
+  await closeRedis();
+  process.exit(0);
+});
