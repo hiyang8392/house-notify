@@ -19,4 +19,8 @@ export const closeRedis = async () => {
   await redis.quit();
 };
 
+export const clearAllIds = async () => {
+  return await redis.del(REDIS_KEY);
+};
+
 export default redis;
