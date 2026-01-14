@@ -9,7 +9,7 @@ const TARGET_URL = process.env.TARGET_URL;
 const TARGET_ITEM_ELEMENT = process.env.TARGET_ITEM_ELEMENT;
 const TARGET_ITEM_INFO_ELEMENT = process.env.TARGET_ITEM_INFO_ELEMENT;
 const USER_AGENT = process.env.USER_AGENT;
-const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/2 * * * *';
+const CRON_SCHEDULE = process.env.CRON_SCHEDULE || '*/5 * * * *';
 const TIME_OUT = 15000;
 const BATCH_SIZE = 10;
 
