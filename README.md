@@ -1,4 +1,11 @@
 
+# 新房源推播通知
+
+> 本專案僅供**學術研究**與**個人學習**用途，不得用於任何商業目的。
+
+## Preview
+![demo image1](https://meee.com.tw/7CHSu3A.png)
+
 ## Start
 
 install
